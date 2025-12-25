@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D粒子动态圣诞树 - 粉色几何风格</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial Rounded MT Bold', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #ffd1dc 0%, #ffc2d1 50%, #ffb3c6 100%);
+            color: #8a1c5a;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .header {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 100;
+            width: 90%;
+            max-width: 800px;
+            padding: 15px 25px;
+            background-color: rgba(255, 255, 255, 0.85);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(218, 112, 214, 0.3);
+            backdrop-filter: blur(5px);
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 8px;
+            color: #ff4081;
+            text-shadow: 2px 2px 0px rgba(255, 255, 255, 0.8);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #8a1c5a;
+        }
+        
+        .description {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #6a1b5a;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            padding: 15px 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(218, 112, 214, 0.3);
+            backdrop-filter: blur(5px);
+            max-width: 90%;
+        }
+        
+        .control-btn {
+            padding: 10px 20px;
+            background: linear-gradient(145deg, #ff4081, #e91e63);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(233, 30, 99, 0.4);
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(233, 30, 99, 0.6);
+        }
+        
+        .control-btn:active {
+            transform: translateY(1px);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slider-label {
+            font-weight: bold;
+            color: #8a1c5a;
+            white-space: nowrap;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            height: 8px;
+            border-radius: 5px;
+            background: #ffc2d1;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #ff4081;
+            cursor: pointer;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .footer {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            z-index: 100;
+            color: #8a1c5a;
+            font-size: 0.9rem;
+            text-align: right;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 8px 15px;
+            border-radius: 15px;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: #8a1c5a;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                top: 10px;
+                padding: 12px 18px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .controls {
+                bottom: 10px;
+                padding: 12px 15px;
+            }
+            
+            .control-btn {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            input[type="range"] {
+                width: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="header">
+            <h1>3D粒子动态圣诞树</h1>
+            <div class="subtitle">粉色几何元素构成 • 卡通渲染风格 • 交互式体验</div>
+            <div class="description">粉色球体与浅粉正方体堆叠形成圣诞树轮廓，搭配彩色糖果棍和可爱小猫贴纸，在柔和暖光下呈现细腻光影效果</div>
+        </div>
+        
+        <div id="canvas-container"></div>
+        
+        <div class="controls">
+            <button class="control-btn" id="toggleRotation">暂停旋转</button>
+            <button class="control-btn" id="toggleParticles">隐藏粒子</button>
+            <button class="control-btn" id="toggleLights">切换灯光</button>
+            
+            <div class="slider-container">
+                <span class="slider-label">旋转速度:</span>
+                <input type="range" id="rotationSpeed" min="0" max="2" step="0.1" value="1">
+            </div>
+            
+            <div class="slider-container">
+                <span class="slider-label">粒子密度:</span>
+                <input type="range" id="particleDensity" min="0" max="100" step="1" value="50">
+            </div>
+        </div>
+        
+        <div class="footer">
+            使用 Three.js 构建 | 直接运行版本
+        </div>
+        
+        <div class="loading" id="loading">
+            加载3D场景中...
+        </div>
+    </div>
+
+    <script>
+        // 主Three.js应用程序
+        class ChristmasTree3D {
+            constructor() {
+                // 初始化变量
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.composer = null;
+                this.controls = null;
+                this.treeObjects = [];
+                this.candyCanes = [];
+                this.catStickers = [];
+                this.particles = [];
+                this.lights = {};
+                this.rotationEnabled = true;
+                this.particlesEnabled = true;
+                this.lightsEnabled = true;
+                this.rotationSpeed = 1.0;
+                this.particleDensity = 50;
+                
+                // 颜色定义
+                this.colors = {
+                    pinkSphere: 0xffb6c1, // 哑光粉色球体
+                    pinkCube: 0xffccd5,   // 亮面浅粉正方体
+                    candyCaneRed: 0xff4081,
+                    candyCaneWhite: 0xffffff,
+                    candyCaneGreen: 0x4CAF50,
+                    backgroundLight: 0xffd1dc,
+                    particlePink: 0xff80ab,
+                    particleLightPink: 0xffc2d1,
+                    lightPink: 0xffe6ee
+                };
+                
+                // 初始化
+                this.init();
+            }
+            
+            init() {
+                // 创建场景
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(this.colors.backgroundLight);
+                
+                // 创建相机
+                this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(10, 5, 10);
+                
+                // 创建渲染器
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                // 添加到DOM
+                const container = document.getElementById('canvas-container');
+                container.appendChild(this.renderer.domElement);
+                
+                // 添加轨道控制
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.maxPolarAngle = Math.PI * 0.8;
+                this.controls.minDistance = 5;
+                this.controls.maxDistance = 25;
+                
+                // 设置灯光
+                this.setupLights();
+                
+                // 创建圣诞树
+                this.createChristmasTree();
+                
+                // 创建糖果棍
+                this.createCandyCanes();
+                
+                // 创建小猫贴纸
+                this.createCatStickers();
+                
+                // 创建粒子系统
+                this.createParticles();
+                
+                // 创建后期处理效果（发光效果）
+                this.setupPostProcessing();
+                
+                // 添加事件监听器
+                this.setupEventListeners();
+                
+                // 隐藏加载界面
+                setTimeout(() => {
+                    document.getElementById('loading').style.display = 'none';
+                }, 1000);
+                
+                // 开始动画循环
+                this.animate();
+            }
+            
+            setupLights() {
+                // 环境光
+                this.lights.ambient = new THREE.AmbientLight(0xffe6ee, 0.4);
+                this.scene.add(this.lights.ambient);
+                
+                // 主方向光（暖光）
+                this.lights.main = new THREE.DirectionalLight(0xfff0f5, 0.8);
+                this.lights.main.position.set(10, 20, 5);
+                this.lights.main.castShadow = true;
+                this.lights.main.shadow.mapSize.width = 2048;
+                this.lights.main.shadow.mapSize.height = 2048;
+                this.lights.main.shadow.camera.near = 0.5;
+                this.lights.main.shadow.camera.far = 50;
+                this.lights.main.shadow.camera.left = -20;
+                this.lights.main.shadow.camera.right = 20;
+                this.lights.main.shadow.camera.top = 20;
+                this.lights.main.shadow.camera.bottom = -20;
+                this.scene.add(this.lights.main);
+                
+                // 辅助光
+                this.lights.fill = new THREE.DirectionalLight(0xffccd5, 0.3);
+                this.lights.fill.position.set(-10, 10, -10);
+                this.scene.add(this.lights.fill);
+                
+                // 点光源（营造温馨氛围）
+                this.lights.point = new THREE.PointLight(0xffb6c1, 0.5, 30);
+                this.lights.point.position.set(0, 5, 0);
+                this.scene.add(this.lights.point);
+                
+                // 添加光源辅助可视化（调试用，正式版可以注释掉）
+                // const helper = new THREE.DirectionalLightHelper(this.lights.main, 5);
+                // this.scene.add(helper);
+            }
+            
+            createChristmasTree() {
+                // 创建圣诞树基座
+                const baseGeometry = new THREE.CylinderGeometry(4, 5, 1, 32);
+                const baseMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xf48fb1,
+                    shininess: 30,
+                    flatShading: true
+                });
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.position.y = 0.5;
+                base.castShadow = true;
+                base.receiveShadow = true;
+                this.scene.add(base);
+                
+                // 创建树的层级
+                const layers = 5;
+                
+                for (let layer = 0; layer < layers; layer++) {
+                    const layerHeight = layer * 2.5;
+                    const layerRadius = 4 - layer * 0.6;
+                    const elementCount = 12 - layer * 2;
+                    
+                    for (let i = 0; i < elementCount; i++) {
+                        // 随机选择球体或立方体
+                        const isSphere = Math.random() > 0.5;
+                        let geometry, material;
+                        
+                        if (isSphere) {
+                            // 哑光粉色球体
+                            const radius = 0.4 + Math.random() * 0.3;
+                            geometry = new THREE.SphereGeometry(radius, 16, 16);
+                            material = new THREE.MeshPhongMaterial({ 
+                                color: this.colors.pinkSphere,
+                                shininess: 10,
+                                flatShading: true
+                            });
+                        } else {
+                            // 亮面浅粉正方体
+                            const size = 0.5 + Math.random() * 0.4;
+                            geometry = new THREE.BoxGeometry(size, size, size);
+                            material = new THREE.MeshPhongMaterial({ 
+                                color: this.colors.pinkCube,
+                                shininess: 100,
+                                flatShading: false
+                            });
+                        }
+                        
+                        const element = new THREE.Mesh(geometry, material);
+                        
+                        // 计算位置（圆锥形分布）
+                        const angle = (i / elementCount) * Math.PI * 2;
+                        const radiusVariation = Math.random() * 0.8;
+                        const x = Math.cos(angle) * (layerRadius - radiusVariation);
+                        const z = Math.sin(angle) * (layerRadius - radiusVariation);
+                        const y = layerHeight + Math.random() * 1.2;
+                        
+                        element.position.set(x, y, z);
+                        
+                        // 随机旋转
+                        element.rotation.x = Math.random() * Math.PI;
+                        element.rotation.y = Math.random() * Math.PI;
+                        
+                        // 添加到场景
+                        element.castShadow = true;
+                        element.receiveShadow = true;
+                        this.scene.add(element);
+                        this.treeObjects.push(element);
+                    }
+                }
+                
+                // 添加树顶
+                const topGeometry = new THREE.ConeGeometry(0.5, 2, 16);
+                const topMaterial = new THREE.MeshPhongMaterial({ 
+                    color: 0xff80ab,
+                    shininess: 50
+                });
+                const top = new THREE.Mesh(topGeometry, topMaterial);
+                top.position.y = layers * 2.5 + 1;
+                top.castShadow = true;
+                this.scene.add(top);
+                this.treeObjects.push(top);
+            }
+            
+            createCandyCanes() {
+                // 创建条纹纹理
+                const createCandyTexture = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 绘制红色背景
+                    ctx.fillStyle = `rgb(${this.colors.candyCaneRed >> 16}, ${(this.colors.candyCaneRed >> 8) & 0xFF}, ${this.colors.candyCaneRed & 0xFF})`;
+                    ctx.fillRect(0, 0, 256, 256);
+                    
+                    // 绘制白色条纹
+                    ctx.fillStyle = '#FFFFFF';
+                    for (let i = 0; i < 10; i++) {
+                        const y = i * 25;
+                        ctx.fillRect(0, y, 256, 12);
+                    }
+                    
+                    // 绘制绿色条纹
+                    ctx.fillStyle = `rgb(${this.colors.candyCaneGreen >> 16}, ${(this.colors.candyCaneGreen >> 8) & 0xFF}, ${this.colors.candyCaneGreen & 0xFF})`;
+                    for (let i = 0; i < 5; i++) {
+                        const y = i * 50 + 25;
+                        ctx.fillRect(0, y, 256, 8);
+                    }
+                    
+                    return canvas;
+                };
+                
+                const texture = new THREE.CanvasTexture(createCandyTexture());
+                
+                // 创建糖果棍
+                for (let i = 0; i < 8; i++) {
+                    const height = 2 + Math.random() * 1.5;
+                    const radius = 0.1;
+                    
+                    const geometry = new THREE.CylinderGeometry(radius, radius, height, 16);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        map: texture,
+                        shininess: 100,
+                        flatShading: false
+                    });
+                    
+                    const candyCane = new THREE.Mesh(geometry, material);
+                    
+                    // 随机位置和角度
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 2 + Math.random() * 2;
+                    const x = Math.cos(angle) * distance;
+                    const z = Math.sin(angle) * distance;
+                    const y = height / 2 + Math.random() * 0.5;
+                    
+                    candyCane.position.set(x, y, z);
+                    
+                    // 随机旋转（斜插效果）
+                    candyCane.rotation.z = Math.PI / 4 + Math.random() * Math.PI / 6;
+                    candyCane.rotation.x = Math.random() * Math.PI / 4;
+                    
+                    candyCane.castShadow = true;
+                    this.scene.add(candyCane);
+                    this.candyCanes.push(candyCane);
+                }
+            }
+            
+            createCatStickers() {
+                // 创建小猫贴纸纹理
+                const createCatTexture = (index) => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 256;
+                    canvas.height = 256;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // 绘制背景（圆形）
+                    ctx.beginPath();
+                    ctx.arc(128, 128, 120, 0, Math.PI * 2);
+                    
+                    // 根据索引使用不同颜色
+                    const bgColors = [
+                        '#FFEBEE', '#FCE4EC', '#F3E5F5', '#E8EAF6',
+                        '#E3F2FD', '#E0F2F1', '#E8F5E8', '#FFF3E0'
+                    ];
+                    
+                    ctx.fillStyle = bgColors[index % bgColors.length];
+                    ctx.fill();
+                    
+                    // 绘制边框
+                    ctx.lineWidth = 8;
+                    ctx.strokeStyle = '#8a1c5a';
+                    ctx.stroke();
+                    
+                    // 绘制内边框（立体效果）
+                    ctx.beginPath();
+                    ctx.arc(128, 128, 115, 0, Math.PI * 2);
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.stroke();
+                    
+                    // 绘制小猫简单图案
+                    ctx.fillStyle = '#6A1B9A';
+                    
+                    // 猫耳朵
+                    ctx.beginPath();
+                    ctx.moveTo(100, 80);
+                    ctx.lineTo(80, 120);
+                    ctx.lineTo(120, 120);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(156, 80);
+                    ctx.lineTo(136, 120);
+                    ctx.lineTo(176, 120);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // 猫脸
+                    ctx.beginPath();
+                    ctx.arc(128, 128, 50, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 眼睛
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(110, 120, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(146, 120, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 眼珠（灵动眼神）
+                    ctx.fillStyle = '#FF4081';
+                    ctx.beginPath();
+                    ctx.arc(110 + (index % 3 - 1) * 2, 120 + (index % 2) * 2, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(146 + (index % 3 - 1) * 2, 120 + (index % 2) * 2, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 鼻子
+                    ctx.fillStyle = '#FF80AB';
+                    ctx.beginPath();
+                    ctx.arc(128, 140, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // 胡须
+                    ctx.strokeStyle = '#6A1B9A';
+                    ctx.lineWidth = 2;
+                    
+                    // 左胡须
+                    ctx.beginPath();
+                    ctx.moveTo(100, 135);
+                    ctx.lineTo(70, 130);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(100, 145);
+                    ctx.lineTo(70, 150);
+                    ctx.stroke();
+                    
+                    // 右胡须
+                    ctx.beginPath();
+                    ctx.moveTo(156, 135);
+                    ctx.lineTo(186, 130);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(156, 145);
+                    ctx.lineTo(186, 150);
+                    ctx.stroke();
+                    
+                    // 添加文字
+                    ctx.fillStyle = '#8a1c5a';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('喵~', 128, 190);
+                    
+                    return canvas;
+                };
+                
+                // 创建多个小猫贴纸
+                for (let i = 0; i < 12; i++) {
+                    const texture = new THREE.CanvasTexture(createCatTexture(i));
+                    
+                    // 创建平面作为贴纸
+                    const size = 0.8 + Math.random() * 0.4;
+                    const geometry = new THREE.PlaneGeometry(size, size);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        map: texture,
+                        transparent: true,
+                        shininess: 30,
+                        side: THREE.DoubleSide
+                    });
+                    
+                    const sticker = new THREE.Mesh(geometry, material);
+                    
+                    // 随机贴在几何元素上
+                    if (this.treeObjects.length > 0) {
+                        const targetObject = this.treeObjects[Math.floor(Math.random() * this.treeObjects.length)];
+                        
+                        // 计算贴纸位置（在目标对象的表面）
+                        const stickerPosition = targetObject.position.clone();
+                        const offsetDirection = new THREE.Vector3(
+                            Math.random() - 0.5,
+                            Math.random() - 0.5,
+                            Math.random() - 0.5
+                        ).normalize().multiplyScalar(targetObject.geometry.boundingSphere ? 
+                            targetObject.geometry.boundingSphere.radius * 1.1 : 0.6);
+                        
+                        stickerPosition.add(offsetDirection);
+                        sticker.position.copy(stickerPosition);
+                        
+                        // 使贴纸面向相机
+                        sticker.lookAt(this.camera.position);
+                    } else {
+                        // 备用位置
+                        const angle = Math.random() * Math.PI * 2;
+                        const distance = 3 + Math.random() * 2;
+                        const x = Math.cos(angle) * distance;
+                        const z = Math.sin(angle) * distance;
+                        const y = 2 + Math.random() * 6;
+                        
+                        sticker.position.set(x, y, z);
+                        
+                        // 随机旋转
+                        sticker.rotation.y = Math.random() * Math.PI * 2;
+                    }
+                    
+                    this.scene.add(sticker);
+                    this.catStickers.push(sticker);
+                }
+            }
+            
+            createParticles() {
+                // 创建粒子几何体
+                const particleCount = 500;
+                const particles = new THREE.BufferGeometry();
+                const positions = new Float32Array(particleCount * 3);
+                const colors = new Float32Array(particleCount * 3);
+                
+                for (let i = 0; i < particleCount; i++) {
+                    // 随机位置（围绕圣诞树）
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 5 + Math.random() * 8;
+                    const height = 2 + Math.random() * 10;
+                    
+                    positions[i * 3] = Math.cos(angle) * distance;
+                    positions[i * 3 + 1] = height;
+                    positions[i * 3 + 2] = Math.sin(angle) * distance;
+                    
+                    // 随机颜色（粉色系）
+                    const color = Math.random() > 0.5 ? 
+                        new THREE.Color(this.colors.particlePink) : 
+                        new THREE.Color(this.colors.particleLightPink);
+                    
+                    colors[i * 3] = color.r;
+                    colors[i * 3 + 1] = color.g;
+                    colors[i * 3 + 2] = color.b;
+                }
+                
+                particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+                
+                // 创建粒子材质
+                const particleMaterial = new THREE.PointsMaterial({
+                    size: 0.1,
+                    vertexColors: true,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                
+                // 创建粒子系统
+                const particleSystem = new THREE.Points(particles, particleMaterial);
+                this.scene.add(particleSystem);
+                this.particles.push(particleSystem);
+            }
+            
+            setupPostProcessing() {
+                // 创建后期处理合成器
+                this.composer = new THREE.EffectComposer(this.renderer);
+                
+                // 添加渲染通道
+                const renderPass = new THREE.RenderPass(this.scene, this.camera);
+                this.composer.addPass(renderPass);
+                
+                // 添加辉光效果
+                const bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    0.5, // 强度
+                    0.4, // 半径
+                    0.85 // 阈值
+                );
+                this.composer.addPass(bloomPass);
+            }
+            
+            setupEventListeners() {
+                // 窗口大小调整
+                window.addEventListener('resize', () => this.onWindowResize());
+                
+                // 控制按钮
+                document.getElementById('toggleRotation').addEventListener('click', () => {
+                    this.rotationEnabled = !this.rotationEnabled;
+                    document.getElementById('toggleRotation').textContent = 
+                        this.rotationEnabled ? '暂停旋转' : '恢复旋转';
+                });
+                
+                document.getElementById('toggleParticles').addEventListener('click', () => {
+                    this.particlesEnabled = !this.particlesEnabled;
+                    document.getElementById('toggleParticles').textContent = 
+                        this.particlesEnabled ? '隐藏粒子' : '显示粒子';
+                    
+                    this.particles.forEach(particle => {
+                        particle.visible = this.particlesEnabled;
+                    });
+                });
+                
+                document.getElementById('toggleLights').addEventListener('click', () => {
+                    this.lightsEnabled = !this.lightsEnabled;
+                    document.getElementById('toggleLights').textContent = 
+                        this.lightsEnabled ? '切换灯光' : '恢复灯光';
+                    
+                    // 切换所有灯光
+                    Object.values(this.lights).forEach(light => {
+                        light.visible = this.lightsEnabled;
+                    });
+                });
+                
+                // 滑块控制
+                document.getElementById('rotationSpeed').addEventListener('input', (e) => {
+                    this.rotationSpeed = parseFloat(e.target.value);
+                });
+                
+                document.getElementById('particleDensity').addEventListener('input', (e) => {
+                    this.particleDensity = parseInt(e.target.value);
+                    this.updateParticleDensity();
+                });
+            }
+            
+            updateParticleDensity() {
+                // 更新粒子可见性基于密度
+                if (this.particles.length > 0) {
+                    const particleSystem = this.particles[0];
+                    const positions = particleSystem.geometry.attributes.position.array;
+                    
+                    for (let i = 0; i < positions.length / 3; i++) {
+                        // 根据密度随机隐藏/显示粒子
+                        const shouldShow = Math.random() * 100 < this.particleDensity;
+                        // 可以通过缩放粒子大小来模拟密度变化
+                        // 这里简单调整粒子大小
+                        if (particleSystem.material.size) {
+                            particleSystem.material.size = 0.05 + (this.particleDensity / 100) * 0.15;
+                            particleSystem.material.needsUpdate = true;
+                        }
+                    }
+                }
+            }
+            
+            onWindowResize() {
+                // 更新相机和渲染器大小
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                // 更新后期处理合成器
+                if (this.composer) {
+                    this.composer.setSize(window.innerWidth, window.innerHeight);
+                }
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // 更新控件
+                this.controls.update();
+                
+                // 旋转圣诞树元素
+                if (this.rotationEnabled) {
+                    const deltaTime = 0.016; // 近似60fps的增量时间
+                    
+                    this.treeObjects.forEach((obj, index) => {
+                        // 每个物体以不同速度旋转
+                        const speed = 0.5 + index * 0.02;
+                        obj.rotation.y += speed * deltaTime * this.rotationSpeed;
+                        
+                        // 添加轻微上下浮动
+                        obj.position.y += Math.sin(Date.now() * 0.001 + index) * 0.001;
+                    });
+                    
+                    // 旋转糖果棍
+                    this.candyCanes.forEach((candy, index) => {
+                        candy.rotation.y += 0.5 * deltaTime * this.rotationSpeed;
+                    });
+                    
+                    // 让小猫贴纸始终面向相机
+                    this.catStickers.forEach(sticker => {
+                        sticker.lookAt(this.camera.position);
+                    });
+                    
+                    // 旋转粒子
+                    this.particles.forEach(particleSystem => {
+                        particleSystem.rotation.y += 0.1 * deltaTime * this.rotationSpeed;
+                    });
+                }
+                
+                // 使用后期处理渲染
+                if (this.composer) {
+                    this.composer.render();
+                } else {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            }
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            // 延迟初始化，确保所有DOM元素已加载
+            setTimeout(() => {
+                const app = new ChristmasTree3D();
+                window.app = app; // 方便在控制台调试
+            }, 100);
+        });
+    </script>
+</body>
+</html>
